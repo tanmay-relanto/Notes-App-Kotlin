@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -48,16 +49,20 @@ fun NotesApp() {
     var showDialog by remember { mutableStateOf(false) }
     var titleInput by remember { mutableStateOf("") }
     var contentInput by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
 
-    // Tracks which note we are editing (null means we are adding a new one)
     var editingNote by remember { mutableStateOf<Note?>(null) }
 
-    // Logic to open dialog for editing
     fun openEditDialog(note: Note) {
         editingNote = note
         titleInput = note.title
         contentInput = note.content
         showDialog = true
+    }
+
+    val filteredNotes = notes.filter {
+        it.title.contains(searchQuery, ignoreCase = true) ||
+                it.content.contains(searchQuery, ignoreCase = true)
     }
 
     if (showDialog) {
@@ -72,13 +77,11 @@ fun NotesApp() {
                 TextButton(onClick = {
                     if (titleInput.isNotBlank()) {
                         if (editingNote != null) {
-                            // EDIT LOGIC: Find index and replace
                             val index = notes.indexOf(editingNote)
                             if (index != -1) {
                                 notes[index] = editingNote!!.copy(title = titleInput, content = contentInput)
                             }
                         } else {
-                            // ADD LOGIC
                             notes.add(Note(notes.size + 1, titleInput, contentInput, "May 4"))
                         }
                         showDialog = false
@@ -129,21 +132,44 @@ fun NotesApp() {
         },
         containerColor = Color(0xFFF8F9FA)
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-            items(notes) { note ->
-                NoteCard(
-                    note = note,
-                    onDelete = { notes.remove(note) },
-                    onEdit = { openEditDialog(note) }
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                placeholder = { Text("Search notes...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = Color(0xFF6200EE)
                 )
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filteredNotes) { note ->
+                    NoteCard(
+                        note = note,
+                        onDelete = { notes.remove(note) },
+                        onEdit = { openEditDialog(note) }
+                    )
+                }
             }
         }
     }
-}
+} // This was the missing brace
 
 @Composable
 fun NoteCard(note: Note, onDelete: () -> Unit, onEdit: () -> Unit) {
